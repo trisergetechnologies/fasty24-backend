@@ -1,6 +1,5 @@
 const asyncHandler = require("express-async-handler");
 const bcrypt = require("bcryptjs");
-const { OAuth2Client } = require("google-auth-library");
 const User = require("../models/User");
 const Expert = require("../models/Expert");
 const Otp = require("../models/Otp");
@@ -10,8 +9,6 @@ const sms = require("../services/sms");
 const { serializeUser, serializeExpert } = require("../lib/serialize");
 const { isProfileComplete } = require("../lib/profile");
 const { loadExpertFromAuth } = require("../lib/expertAuth");
-
-const googleClient = new OAuth2Client(env.GOOGLE_CLIENT_ID || "");
 
 function genCode() {
   return String(Math.floor(100000 + Math.random() * 900000));
@@ -244,49 +241,6 @@ const loginEmail = asyncHandler(async (req, res) => {
   });
 });
 
-const googleAuth = asyncHandler(async (req, res) => {
-  const { idToken } = req.body;
-  if (!idToken) {
-    return res.status(400).json({ error: "id_token_required" });
-  }
-  let payload;
-  try {
-    const ticket = await googleClient.verifyIdToken({
-      idToken,
-      audience: env.GOOGLE_CLIENT_ID,
-    });
-    payload = ticket.getPayload();
-  } catch {
-    return res.status(401).json({ error: "invalid_google_token" });
-  }
-  const { sub: googleId, email, name, picture } = payload;
-  let user = await User.findOne({ googleId });
-  if (!user && email) {
-    user = await User.findOne({ email: email.toLowerCase() });
-  }
-  const isNew = !user;
-  if (!user) {
-    user = await User.create({
-      googleId,
-      ...(email ? { email: email.toLowerCase() } : {}),
-      name: name || "",
-      authMethod: "google",
-    });
-  } else if (!user.googleId) {
-    user.googleId = googleId;
-    user.authMethod = "google";
-    await user.save();
-  }
-  const token = signToken({ sub: user._id.toString(), role: "customer" });
-  res.json({
-    token,
-    role: "customer",
-    principal: serializeUser(user),
-    needsProfile: !isProfileComplete(user),
-    isNew,
-  });
-});
-
 module.exports = {
   requestOtp,
   verifyOtp,
@@ -295,5 +249,4 @@ module.exports = {
   updatePushToken,
   registerEmail,
   loginEmail,
-  googleAuth,
 };

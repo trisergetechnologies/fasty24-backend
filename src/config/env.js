@@ -20,7 +20,6 @@ const env = {
   EXPERT_AVG_SPEED_KMPH: parseFloat(process.env.EXPERT_AVG_SPEED_KMPH || "22"),
   SLOT_WINDOWS: (process.env.SLOT_WINDOWS || "09-11,11-13,13-15,15-17,17-19").split(",").map((s) => s.trim()),
   SLOT_MAX_CAPACITY: parseInt(process.env.SLOT_MAX_CAPACITY || "5", 10),
-  GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || "",
   RAZORPAY_KEY_ID: process.env.RAZORPAY_KEY_ID || "",
   RAZORPAY_KEY_SECRET: process.env.RAZORPAY_KEY_SECRET || "",
   CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME || "",

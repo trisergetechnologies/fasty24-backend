@@ -16,7 +16,6 @@ router.post("/auth/verify-otp", auth.verifyOtp);
 router.post("/auth/complete-profile", auth.completeProfile);
 router.post("/auth/register-email", auth.registerEmail);
 router.post("/auth/login-email", auth.loginEmail);
-router.post("/auth/google", auth.googleAuth);
 router.get("/services", services.list);
 router.get("/services/:id/reviews", services.reviews);
 router.get("/services/:id", services.get);

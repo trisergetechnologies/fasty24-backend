@@ -18,7 +18,7 @@ async function main() {
   app.use(morgan("dev"));
 
   app.get("/health", (_req, res) => res.json({ ok: true, ts: Date.now() }));
-  app.use("/api", routes);
+  app.use("/api/v1", routes);
   app.use(notFound);
   app.use(errorHandler);
 
