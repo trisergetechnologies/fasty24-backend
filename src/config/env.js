@@ -12,8 +12,6 @@ const env = {
   MSG91_SENDER: process.env.MSG91_SENDER || process.env.MSG91_SENDER_ID || "FASTY24",
   H3_RESOLUTION: parseInt(process.env.H3_RESOLUTION || "9", 10),
   DISPATCH_RADIUS_METERS: parseInt(process.env.DISPATCH_RADIUS_METERS || "7000", 10),
-  // Demo mode: offer jobs to ANY online expert, ignoring distance + skill filters.
-  DISPATCH_MATCH_ALL: (process.env.DISPATCH_MATCH_ALL || "false") === "true",
   DISPATCH_FAIL_AFTER_MS: parseInt(process.env.DISPATCH_FAIL_AFTER_MS || "300000", 10),
   DISPATCH_OFFER_TIMEOUT_SEC: parseInt(process.env.DISPATCH_OFFER_TIMEOUT_SEC || "120", 10),
   EXPERT_LOCATION_STALE_MS: parseInt(process.env.EXPERT_LOCATION_STALE_MS || "300000", 10),

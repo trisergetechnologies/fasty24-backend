@@ -8,20 +8,18 @@ const customer = require("../controllers/customer.controller");
 const admin = require("../controllers/admin.controller");
 const slots = require("../controllers/slots.controller");
 const uploads = require("../controllers/upload.controller");
-const zone = require("../controllers/zone.controller");
 const { requireAuth } = require("../middleware/auth");
 
 router.post("/auth/request-otp", auth.requestOtp);
 router.post("/auth/verify-otp", auth.verifyOtp);
 router.post("/auth/complete-profile", auth.completeProfile);
-router.post("/auth/register-email", auth.registerEmail);
 router.post("/auth/login-email", auth.loginEmail);
+router.post("/auth/register-email", auth.registerEmail);
 router.get("/services", services.list);
 router.get("/services/:id/reviews", services.reviews);
 router.get("/services/:id", services.get);
 router.get("/categories", categories.list);
 router.get("/slots", slots.list);
-router.get("/zone/check", zone.checkZone);
 
 router.get("/me", requireAuth(), auth.me);
 router.patch("/me/profile", requireAuth("customer"), customer.updateProfile);

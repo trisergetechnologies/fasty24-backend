@@ -49,7 +49,6 @@ function serializeService(svc) {
         order: p.order || 0,
       })),
     inclusions: o.inclusions || [],
-    exclusions: o.exclusions || [],
     faqs: (o.faqs || []).map((f) => ({ q: f.q || "", a: f.a || "" })),
     durationMin: o.durationMin,
     price: o.price,
@@ -70,7 +69,6 @@ function serializeCategory(cat) {
     name: o.name,
     description: o.description,
     icon: o.icon || "",
-    imageUrl: o.imageUrl || "",
     sortOrder: o.sortOrder,
     supportsScheduling: o.supportsScheduling,
     supportsTimedJob: o.supportsTimedJob,
@@ -127,17 +125,8 @@ function serializeBooking(booking) {
       ? {
           startVerified: !!o.sessionOtp.startVerifiedAt,
           endVerified: !!o.sessionOtp.endVerifiedAt,
-          requiresStartOtp:
-            ["assigned", "arrived"].includes(o.status) &&
-            !!o.sessionOtp.startCode &&
-            !o.sessionOtp.startVerifiedAt,
-          requiresEndOtp:
-            o.status === "in_progress" &&
-            !!o.sessionOtp.endCode &&
-            !o.sessionOtp.endVerifiedAt,
-          // Customer holds the codes and reads them to the expert to start/finish.
-          startCode: o.sessionOtp.startVerifiedAt ? null : o.sessionOtp.startCode,
-          endCode: o.sessionOtp.endVerifiedAt ? null : o.sessionOtp.endCode,
+          requiresStartOtp: o.status === "assigned" && !!o.sessionOtp.startCode,
+          requiresEndOtp: o.status === "in_progress" && !!o.sessionOtp.endCode,
         }
       : null,
     expertEarning: o.expertEarning,

@@ -6,7 +6,6 @@ const categorySchema = new mongoose.Schema(
     name: { type: String, required: true },
     description: { type: String, default: "" },
     icon: { type: String, default: "" },
-    imageUrl: { type: String, default: "" },
     sortOrder: { type: Number, default: 0 },
     supportsScheduling: { type: Boolean, default: true },
     supportsTimedJob: { type: Boolean, default: false },
