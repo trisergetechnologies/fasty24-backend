@@ -1,0 +1,73 @@
+const router = require("express").Router();
+const auth = require("../controllers/auth.controller");
+const services = require("../controllers/service.controller");
+const categories = require("../controllers/category.controller");
+const bookings = require("../controllers/booking.controller");
+const experts = require("../controllers/expert.controller");
+const customer = require("../controllers/customer.controller");
+const admin = require("../controllers/admin.controller");
+const slots = require("../controllers/slots.controller");
+const uploads = require("../controllers/upload.controller");
+const zone = require("../controllers/zone.controller");
+const { requireAuth } = require("../middleware/auth");
+
+router.post("/auth/request-otp", auth.requestOtp);
+router.post("/auth/verify-otp", auth.verifyOtp);
+router.post("/auth/complete-profile", auth.completeProfile);
+router.post("/auth/register-email", auth.registerEmail);
+router.post("/auth/login-email", auth.loginEmail);
+router.post("/auth/google", auth.googleAuth);
+router.get("/services", services.list);
+router.get("/services/:id/reviews", services.reviews);
+router.get("/services/:id", services.get);
+router.get("/categories", categories.list);
+router.get("/slots", slots.list);
+router.get("/zone/check", zone.checkZone);
+
+router.get("/me", requireAuth(), auth.me);
+router.patch("/me/profile", requireAuth("customer"), customer.updateProfile);
+router.post("/me/push-token", requireAuth(), auth.updatePushToken);
+router.post("/me/addresses", requireAuth("customer"), customer.addAddress);
+router.patch("/me/addresses/:addressId", requireAuth("customer"), customer.updateAddress);
+router.delete("/me/addresses/:addressId", requireAuth("customer"), customer.deleteAddress);
+router.post("/me/addresses/:addressId/default", requireAuth("customer"), customer.setDefaultAddress);
+
+router.post("/bookings", requireAuth("customer"), bookings.create);
+router.get("/bookings", requireAuth(), bookings.list);
+router.get("/bookings/:id", requireAuth(), bookings.get);
+router.post("/bookings/:id/cancel", requireAuth("customer"), bookings.cancel);
+router.post("/bookings/:id/add-on", requireAuth(), bookings.addAddOn);
+router.post("/bookings/:id/addon/suggest", requireAuth("expert"), bookings.suggestAddOn);
+router.get("/bookings/:id/addons/available", requireAuth(), bookings.availableAddOns);
+router.post("/bookings/:id/payment", requireAuth("customer"), bookings.confirmPayment);
+router.post("/bookings/:id/rate", requireAuth("customer"), bookings.rate);
+
+router.get("/expert/me", requireAuth("expert"), experts.me);
+router.patch("/expert/me", requireAuth("expert"), experts.updateProfile);
+router.post("/expert/online", requireAuth("expert"), experts.goOnline);
+router.post("/expert/offline", requireAuth("expert"), experts.goOffline);
+router.get("/expert/dashboard", requireAuth("expert"), experts.dashboard);
+router.get("/expert/earnings", requireAuth("expert"), experts.earnings);
+router.get("/expert/pending-offer", requireAuth("expert"), experts.pendingOffer);
+router.post("/expert/offer/respond", requireAuth("expert"), experts.respondOffer);
+router.post("/expert/kyc", requireAuth("expert"), experts.submitKyc);
+router.post("/expert/training", requireAuth("expert"), experts.updateTraining);
+router.post("/bookings/:id/arrived", requireAuth("expert"), bookings.expertArrived);
+router.post("/bookings/:id/start", requireAuth("expert"), bookings.expertStart);
+router.post("/bookings/:id/complete", requireAuth("expert"), bookings.expertComplete);
+
+router.post("/admin/login", admin.login);
+router.get("/admin/bookings", requireAuth("admin"), admin.listBookings);
+router.get("/admin/reviews", requireAuth("admin"), admin.listReviews);
+router.get("/admin/services", requireAuth("admin"), services.listAll);
+router.post("/admin/services", requireAuth("admin"), services.create);
+router.patch("/admin/services/:id", requireAuth("admin"), services.update);
+router.delete("/admin/services/:id", requireAuth("admin"), services.remove);
+router.get("/admin/categories", requireAuth("admin"), categories.listAll);
+router.post("/admin/categories", requireAuth("admin"), categories.create);
+router.patch("/admin/categories/:id", requireAuth("admin"), categories.update);
+router.get("/admin/experts", requireAuth("admin"), admin.listExperts);
+router.post("/admin/uploads", requireAuth("admin"), uploads.single, uploads.uploadSingle);
+router.post("/admin/uploads/multiple", requireAuth("admin"), uploads.multiple, uploads.uploadMultiple);
+
+module.exports = router;
