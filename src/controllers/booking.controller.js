@@ -11,10 +11,42 @@ const pricing = require("../services/pricing");
 const paymentService = require("../services/payment");
 const notify = require("../services/notify");
 const earningsService = require("../services/earnings");
+const sms = require("../services/sms");
+const User = require("../models/User");
 const { findByPublicId, isMongoObjectId, bookingRoomId } = require("../lib/ids");
 const { serializeBooking } = require("../lib/serialize");
 const { serializeBookingForExpert } = require("../lib/serializeExpertBooking");
 const { loadExpertFromAuth } = require("../lib/expertAuth");
+
+async function notifyCustomerSessionOtp(booking, kind) {
+  try {
+    const customerId = booking.customer?._id || booking.customer;
+    if (!customerId) return;
+    const customer = await User.findById(customerId).select("phone pushToken name").lean();
+    if (!customer) return;
+
+    const code =
+      kind === "start" ? booking.sessionOtp?.startCode : booking.sessionOtp?.endCode;
+    if (!code) return;
+
+    const title = kind === "start" ? "Start service code" : "Complete service code";
+    const body =
+      kind === "start"
+        ? `Share code ${code} with your Fasty24 expert to start the service.`
+        : `Share code ${code} with your Fasty24 expert to complete the service.`;
+
+    if (customer.phone) {
+      await sms.sendOtp(customer.phone, code, kind === "start" ? "start" : "end");
+    }
+    await notify.expoPush(customer.pushToken, title, body, {
+      bookingId: booking.publicId || booking._id?.toString(),
+      kind: kind === "start" ? "start_otp" : "end_otp",
+      code,
+    });
+  } catch (err) {
+    console.warn("[booking] session otp notify failed", err.message);
+  }
+}
 
 function startOfDay(d = new Date()) {
   const x = new Date(d);
@@ -317,14 +349,61 @@ const rate = asyncHandler(async (req, res) => {
   res.json(serializeBooking(booking));
 });
 
+const expertEnRoute = asyncHandler(async (req, res) => {
+  const ef = await expertFilter(req);
+  if (!ef.expert) return res.status(404).json({ error: "not_found" });
+  const booking = await loadBooking(req.params.id, { expert: ef.expert });
+  if (!booking) return res.status(404).json({ error: "not_found" });
+  if (booking.status !== "assigned") {
+    return res.status(400).json({ error: "invalid_status", message: "Start travel only after the job is assigned." });
+  }
+  booking.status = "travelling";
+  booking.timeline.enRouteAt = new Date();
+  await booking.save();
+
+  const room = `booking:${bookingRoomId(booking)}`;
+  const customerPayload = serializeBooking(booking);
+  notify.emitToRoom(req.app.get("io"), room, "booking:update", {
+    status: "travelling",
+    timeline: booking.timeline,
+    sessionOtp: customerPayload.sessionOtp,
+  });
+  notify.emitToRoom(req.app.get("io"), room, "booking:status", {
+    status: "travelling",
+    timeline: booking.timeline,
+    sessionOtp: customerPayload.sessionOtp,
+  });
+  notify.emitToRoom(req.app.get("io"), room, "booking:en_route", {
+    status: "travelling",
+    timeline: booking.timeline,
+    sessionOtp: customerPayload.sessionOtp,
+  });
+
+  const payload = serializeBookingForExpert(booking, serializeBooking(booking));
+  res.json(payload);
+});
+
 const expertArrived = asyncHandler(async (req, res) => {
   const ef = await expertFilter(req);
   if (!ef.expert) return res.status(404).json({ error: "not_found" });
   const booking = await loadBooking(req.params.id, { expert: ef.expert });
   if (!booking) return res.status(404).json({ error: "not_found" });
+  if (!["travelling", "assigned"].includes(booking.status)) {
+    return res.status(400).json({
+      error: "invalid_status",
+      message: "Mark arrived after you are on the way.",
+    });
+  }
+  // If expert skipped "on the way", still stamp enRouteAt for timeline continuity
+  if (!booking.timeline.enRouteAt) {
+    booking.timeline.enRouteAt = new Date();
+  }
   booking.status = "arrived";
   booking.timeline.arrivedAt = new Date();
   await booking.save();
+
+  await notifyCustomerSessionOtp(booking, "start");
+
   const room = `booking:${bookingRoomId(booking)}`;
   const customerPayload = serializeBooking(booking);
   notify.emitToRoom(req.app.get("io"), room, "booking:update", {
@@ -346,7 +425,9 @@ const expertStart = asyncHandler(async (req, res) => {
   if (!ef.expert) return res.status(404).json({ error: "not_found" });
   const booking = await loadBooking(req.params.id, { expert: ef.expert });
   if (!booking) return res.status(404).json({ error: "not_found" });
-  if (!["assigned", "arrived"].includes(booking.status)) return res.status(400).json({ error: "invalid_status" });
+  if (!["assigned", "travelling", "arrived"].includes(booking.status)) {
+    return res.status(400).json({ error: "invalid_status" });
+  }
   const { otp } = req.body;
   if (!otp || booking.sessionOtp?.startCode !== String(otp).trim()) {
     return res.status(400).json({ error: "invalid_otp" });
@@ -360,6 +441,9 @@ const expertStart = asyncHandler(async (req, res) => {
     booking.jobTimer.endsAt = endsAt;
   }
   await booking.save();
+
+  await notifyCustomerSessionOtp(booking, "end");
+
   const customerPayload = serializeBooking(booking);
   notify.emitToRoom(req.app.get("io"), `booking:${bookingRoomId(booking)}`, "booking:status", {
     status: "in_progress",
@@ -400,8 +484,15 @@ const expertComplete = asyncHandler(async (req, res) => {
     { _id: ef.expert },
     { status: "online", activeBooking: null, $inc: { completedJobs: 1 } }
   );
+  const customerPayload = serializeBooking(booking);
   notify.emitToRoom(req.app.get("io"), `booking:${bookingRoomId(booking)}`, "booking:status", {
     status: "completed",
+    sessionOtp: customerPayload.sessionOtp,
+  });
+  notify.emitToRoom(req.app.get("io"), `booking:${bookingRoomId(booking)}`, "booking:update", {
+    status: "completed",
+    timeline: booking.timeline,
+    sessionOtp: customerPayload.sessionOtp,
   });
   const payload = serializeBookingForExpert(booking, serializeBooking(booking));
   res.json(payload);
@@ -417,6 +508,7 @@ module.exports = {
   availableAddOns,
   confirmPayment,
   rate,
+  expertEnRoute,
   expertArrived,
   expertStart,
   expertComplete,

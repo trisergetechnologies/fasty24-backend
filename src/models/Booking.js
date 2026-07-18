@@ -49,7 +49,17 @@ const bookingSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["created", "scheduled", "searching", "assigned", "arrived", "in_progress", "completed", "cancelled"],
+      enum: [
+        "created",
+        "scheduled",
+        "searching",
+        "assigned",
+        "travelling",
+        "arrived",
+        "in_progress",
+        "completed",
+        "cancelled",
+      ],
       default: "created",
       index: true,
     },
@@ -91,6 +101,7 @@ const bookingSchema = new mongoose.Schema(
     timeline: {
       createdAt: { type: Date, default: Date.now },
       assignedAt: Date,
+      enRouteAt: Date,
       arrivedAt: Date,
       startedAt: Date,
       completedAt: Date,

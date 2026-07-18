@@ -125,8 +125,27 @@ function serializeBooking(booking) {
       ? {
           startVerified: !!o.sessionOtp.startVerifiedAt,
           endVerified: !!o.sessionOtp.endVerifiedAt,
-          requiresStartOtp: o.status === "assigned" && !!o.sessionOtp.startCode,
-          requiresEndOtp: o.status === "in_progress" && !!o.sessionOtp.endCode,
+          requiresStartOtp:
+            ["assigned", "travelling", "arrived"].includes(o.status) &&
+            !!o.sessionOtp.startCode &&
+            !o.sessionOtp.startVerifiedAt,
+          requiresEndOtp:
+            o.status === "in_progress" &&
+            !!o.sessionOtp.endCode &&
+            !o.sessionOtp.endVerifiedAt,
+          // Customer must see codes so they can share with the expert in person
+          startCode:
+            ["assigned", "travelling", "arrived"].includes(o.status) &&
+            !!o.sessionOtp.startCode &&
+            !o.sessionOtp.startVerifiedAt
+              ? o.sessionOtp.startCode
+              : null,
+          endCode:
+            o.status === "in_progress" &&
+            !!o.sessionOtp.endCode &&
+            !o.sessionOtp.endVerifiedAt
+              ? o.sessionOtp.endCode
+              : null,
         }
       : null,
     expertEarning: o.expertEarning,

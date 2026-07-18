@@ -51,6 +51,7 @@ router.get("/expert/pending-offer", requireAuth("expert"), experts.pendingOffer)
 router.post("/expert/offer/respond", requireAuth("expert"), experts.respondOffer);
 router.post("/expert/kyc", requireAuth("expert"), experts.submitKyc);
 router.post("/expert/training", requireAuth("expert"), experts.updateTraining);
+router.post("/bookings/:id/en-route", requireAuth("expert"), bookings.expertEnRoute);
 router.post("/bookings/:id/arrived", requireAuth("expert"), bookings.expertArrived);
 router.post("/bookings/:id/start", requireAuth("expert"), bookings.expertStart);
 router.post("/bookings/:id/complete", requireAuth("expert"), bookings.expertComplete);

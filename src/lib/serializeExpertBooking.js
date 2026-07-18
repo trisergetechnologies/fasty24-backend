@@ -30,7 +30,7 @@ function serializeBookingForExpert(booking, base) {
           startVerified: !!o.sessionOtp.startVerifiedAt,
           endVerified: !!o.sessionOtp.endVerifiedAt,
           requiresStartOtp:
-            ["assigned", "arrived"].includes(o.status) &&
+            ["assigned", "travelling", "arrived"].includes(o.status) &&
             !!o.sessionOtp.startCode &&
             !o.sessionOtp.startVerifiedAt,
           requiresEndOtp:
