@@ -11,6 +11,13 @@ const env = {
   MSG91_API_KEY: process.env.MSG91_API_KEY || process.env.MSG91_AUTH_KEY || "",
   MSG91_SENDER: process.env.MSG91_SENDER || process.env.MSG91_SENDER_ID || "FASTY24",
   H3_RESOLUTION: parseInt(process.env.H3_RESOLUTION || "9", 10),
+  // Primary launch market — Vaishali, Ghaziabad (~7 km radius)
+  SERVICE_AREA_SLUG: process.env.SERVICE_AREA_SLUG || "vaishali",
+  SERVICE_AREA_NAME: process.env.SERVICE_AREA_NAME || "Vaishali, Ghaziabad",
+  SERVICE_AREA_CITY: process.env.SERVICE_AREA_CITY || "Ghaziabad",
+  SERVICE_AREA_LAT: parseFloat(process.env.SERVICE_AREA_LAT || "28.6517"),
+  SERVICE_AREA_LNG: parseFloat(process.env.SERVICE_AREA_LNG || "77.3395"),
+  SERVICE_AREA_RADIUS_KM: parseFloat(process.env.SERVICE_AREA_RADIUS_KM || "7"),
   DISPATCH_RADIUS_METERS: parseInt(process.env.DISPATCH_RADIUS_METERS || "7000", 10),
   DISPATCH_FAIL_AFTER_MS: parseInt(process.env.DISPATCH_FAIL_AFTER_MS || "300000", 10),
   DISPATCH_OFFER_TIMEOUT_SEC: parseInt(process.env.DISPATCH_OFFER_TIMEOUT_SEC || "120", 10),

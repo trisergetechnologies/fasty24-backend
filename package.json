@@ -8,6 +8,7 @@
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
     "seed": "node src/scripts/seed.js",
+    "upsert-zone": "node src/scripts/upsert-vaishali-zone.js",
     "test": "node test/smoke.test.js"
   },
   "dependencies": {

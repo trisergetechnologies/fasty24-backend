@@ -1,7 +1,6 @@
 require("dotenv").config();
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
-const h3 = require("h3-js");
 const Category = require("../models/Category");
 const Service = require("../models/Service");
 const Expert = require("../models/Expert");
@@ -174,26 +173,31 @@ async function seed() {
     }))
   );
 
+  const center = {
+    lat: env.SERVICE_AREA_LAT,
+    lng: env.SERVICE_AREA_LNG,
+  };
+  // Approximate square polygon (~7 km) around Vaishali for Zone.polygon storage
+  const delta = env.SERVICE_AREA_RADIUS_KM / 111; // ~degrees per km
   const polygon = {
     type: "Polygon",
     coordinates: [
       [
-        [77.18, 28.59],
-        [77.25, 28.59],
-        [77.25, 28.65],
-        [77.18, 28.65],
-        [77.18, 28.59],
+        [center.lng - delta, center.lat - delta],
+        [center.lng + delta, center.lat - delta],
+        [center.lng + delta, center.lat + delta],
+        [center.lng - delta, center.lat + delta],
+        [center.lng - delta, center.lat - delta],
       ],
     ],
   };
-  const h3Cells = h3.polygonToCells(
-    polygon.coordinates.map((ring) => ring.map(([lng, lat]) => [lat, lng])),
-    env.H3_RESOLUTION
-  );
+  const k = geo.kForRadiusMeters(env.SERVICE_AREA_RADIUS_KM * 1000);
+  const h3Cells = geo.ringCells(center.lat, center.lng, k);
+  await Zone.deleteMany({});
   await Zone.create({
-    slug: "central-delhi",
-    name: "Central Delhi",
-    city: "Delhi",
+    slug: env.SERVICE_AREA_SLUG,
+    name: env.SERVICE_AREA_NAME,
+    city: env.SERVICE_AREA_CITY,
     polygon,
     h3Cells,
     active: true,
@@ -211,18 +215,17 @@ async function seed() {
     addresses: [
       {
         label: "Home",
-        line1: "Demo Apartment, Connaught Place",
-        line2: "Near Rajiv Chowk Metro",
-        city: "New Delhi",
-        pincode: "110001",
-        lat: 28.6315,
-        lng: 77.2167,
+        line1: "Demo Flat, Vaishali Sector 4",
+        line2: "Near Vaishali Metro",
+        city: "Ghaziabad",
+        pincode: "201010",
+        lat: center.lat,
+        lng: center.lng,
         isDefault: true,
       },
     ],
   });
 
-  const center = { lat: 28.614, lng: 77.21 };
   const skills = ["instant_maid", "ac_service", "chimney", "ro_service", "fridge"];
   for (let i = 0; i < 8; i++) {
     const lat = center.lat + (Math.random() - 0.5) * 0.04;

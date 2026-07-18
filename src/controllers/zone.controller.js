@@ -1,10 +1,15 @@
 const asyncHandler = require("express-async-handler");
 const Zone = require("../models/Zone");
 const geo = require("../services/geo");
+const {
+  isWithinConfiguredServiceArea,
+  serviceAreaFallbackZone,
+} = require("../services/pricing");
 
 /**
- * GET /zone/check?lat=28.6&lng=77.2
- * Returns whether the given coordinate falls inside an active service zone.
+ * GET /zone/check?lat=28.65&lng=77.34
+ * Returns whether the given coordinate falls inside an active service zone
+ * (H3 polygon) or the configured launch radius (Vaishali ~7 km).
  */
 const checkZone = asyncHandler(async (req, res) => {
   const lat = parseFloat(req.query.lat);
@@ -19,6 +24,15 @@ const checkZone = asyncHandler(async (req, res) => {
 
   if (zone) {
     return res.json({ inZone: true, zoneName: zone.name, zoneSlug: zone.slug });
+  }
+
+  if (isWithinConfiguredServiceArea(lat, lng)) {
+    const fallback = serviceAreaFallbackZone();
+    return res.json({
+      inZone: true,
+      zoneName: fallback.name,
+      zoneSlug: fallback.slug,
+    });
   }
 
   return res.json({ inZone: false, zoneName: null, zoneSlug: null });
