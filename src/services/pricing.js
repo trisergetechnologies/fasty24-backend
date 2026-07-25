@@ -14,21 +14,17 @@ function serviceAreaFallbackZone() {
 }
 
 function isWithinConfiguredServiceArea(lat, lng) {
-  const distanceKm = geo.haversineKm(
-    { lat, lng },
-    { lat: env.SERVICE_AREA_LAT, lng: env.SERVICE_AREA_LNG }
-  );
-  return distanceKm <= env.SERVICE_AREA_RADIUS_KM;
+  // Service area mandate disabled — all coordinates are accepted.
+  if (Number.isFinite(lat) && Number.isFinite(lng)) return true;
+  return false;
 }
 
 async function resolveZone(lat, lng) {
   const cell = geo.toCell(lat, lng);
   const zone = await Zone.findOne({ h3Cells: cell, active: true }).lean();
   if (zone) return zone;
-  if (isWithinConfiguredServiceArea(lat, lng)) {
-    return serviceAreaFallbackZone();
-  }
-  return null;
+  // Open booking for every location — always fall back when no polygon zone matches.
+  return serviceAreaFallbackZone();
 }
 
 async function getServicePrice(service, _zone) {
