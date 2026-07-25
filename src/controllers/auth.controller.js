@@ -108,11 +108,12 @@ const verifyOtp = asyncHandler(async (req, res) => {
       $setOnInsert: {
         phone,
         name: name || "New Expert",
-        skills: ["instant_maid", "ac_service"],
+        skills: ["instant_maid", "ac_service", "chimney", "ro_service", "fridge"],
       },
     },
     { upsert: true, new: true }
   );
+  const serialized = await serializeExpert(principal);
   const token = signToken({
     sub: principal._id.toString(),
     role: "expert",
@@ -121,8 +122,10 @@ const verifyOtp = asyncHandler(async (req, res) => {
   return res.json({
     token,
     role: "expert",
-    principal: await serializeExpert(principal),
-    needsProfile: false,
+    principal: serialized,
+    expert: serialized,
+    needsProfile: principal.kycStatus !== "verified",
+    needsOnboarding: principal.kycStatus !== "verified",
   });
 });
 

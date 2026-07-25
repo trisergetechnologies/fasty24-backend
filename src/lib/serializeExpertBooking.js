@@ -40,6 +40,9 @@ function serializeBookingForExpert(booking, base) {
           // Expert enters OTP verbally from customer — never expose codes in expert API
         }
       : null,
+    arrivalSelfie: o.arrivalSelfie?.url
+      ? { url: o.arrivalSelfie.url, capturedAt: o.arrivalSelfie.capturedAt || null }
+      : null,
   };
 }
 

@@ -45,6 +45,8 @@ async function findBroadcastCandidates(booking, requiredSkills) {
 
   const baseQuery = {
     status: "online",
+    // Grandfather experts created before KYC existed (no kycStatus field).
+    $or: [{ kycStatus: "verified" }, { kycStatus: { $exists: false } }, { kycStatus: null }],
     "lastLocation.lat": { $ne: null },
     "lastLocation.lng": { $ne: null },
     "lastLocation.updatedAt": { $gte: staleBefore },

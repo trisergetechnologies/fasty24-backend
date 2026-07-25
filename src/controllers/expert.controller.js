@@ -35,6 +35,13 @@ const updateProfile = asyncHandler(async (req, res) => {
 const goOnline = asyncHandler(async (req, res) => {
   const expert = await requireExpert(req, res);
   if (!expert) return;
+  // Missing kycStatus is treated as verified so pre-feature production experts stay online.
+  if (expert.kycStatus && expert.kycStatus !== "verified") {
+    return res.status(403).json({
+      error: "kyc_not_verified",
+      message: "Complete onboarding and wait for admin approval before going online.",
+    });
+  }
   const { lat, lng } = req.body;
   if (typeof lat !== "number" || typeof lng !== "number") {
     return res.status(400).json({ error: "lat_lng_required" });
@@ -93,12 +100,53 @@ const respondOffer = asyncHandler(async (req, res) => {
   res.json({ ok });
 });
 
-const submitKyc = asyncHandler(async (req, res) => {
+const submitOnboarding = asyncHandler(async (req, res) => {
   const expert = await requireExpert(req, res);
   if (!expert) return;
+
+  const { specialization, documents = {}, bank = {} } = req.body;
+  const requiredDocs = [
+    "aadhaarNumber",
+    "aadhaarFrontUrl",
+    "aadhaarBackUrl",
+    "panNumber",
+    "panUrl",
+    "selfieUrl",
+  ];
+  for (const key of requiredDocs) {
+    if (!documents[key] || !String(documents[key]).trim()) {
+      return res.status(400).json({ error: "documents_incomplete", message: `Missing ${key}` });
+    }
+  }
+  if (!bank.accountNumber || !bank.ifsc || !bank.holderName) {
+    return res.status(400).json({
+      error: "bank_incomplete",
+      message: "Account number, IFSC, and holder name are required.",
+    });
+  }
+
   const updated = await Expert.findByIdAndUpdate(
     expert._id,
-    { kycStatus: "submitted", kycNote: req.body.note || "", kycSubmittedAt: new Date() },
+    {
+      specialization: specialization || "general",
+      documents: {
+        aadhaarNumber: String(documents.aadhaarNumber).trim(),
+        aadhaarFrontUrl: String(documents.aadhaarFrontUrl).trim(),
+        aadhaarBackUrl: String(documents.aadhaarBackUrl).trim(),
+        panNumber: String(documents.panNumber).trim().toUpperCase(),
+        panUrl: String(documents.panUrl).trim(),
+        selfieUrl: String(documents.selfieUrl).trim(),
+      },
+      bank: {
+        accountNumber: String(bank.accountNumber).trim(),
+        ifsc: String(bank.ifsc).trim().toUpperCase(),
+        holderName: String(bank.holderName).trim(),
+      },
+      photoUrl: String(documents.selfieUrl).trim(),
+      kycStatus: "submitted",
+      kycNote: "",
+      kycSubmittedAt: new Date(),
+    },
     { new: true }
   );
   res.json(await serializeExpert(updated));
@@ -128,6 +176,6 @@ module.exports = {
   earnings,
   pendingOffer,
   respondOffer,
-  submitKyc,
+  submitOnboarding,
   updateTraining,
 };

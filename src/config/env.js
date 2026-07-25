@@ -31,6 +31,10 @@ const env = {
   CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY || "",
   CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET || "",
   CLOUDINARY_FOLDER: process.env.CLOUDINARY_FOLDER || "fasty24/services",
+  DISPATCH_MATCH_ALL: (process.env.DISPATCH_MATCH_ALL || "false") === "true",
+  // When true, Mark Arrived / Start Job require an arrival selfie.
+  // Keep false in production until the updated expert app is fully rolled out.
+  REQUIRE_ARRIVAL_SELFIE: (process.env.REQUIRE_ARRIVAL_SELFIE || "false") === "true",
   CORS_ORIGINS: (() => {
     const raw = process.env.CORS_ORIGINS || process.env.CORS_ORIGIN || "";
     const parsed = raw

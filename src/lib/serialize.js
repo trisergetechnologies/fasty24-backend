@@ -49,6 +49,7 @@ function serializeService(svc) {
         order: p.order || 0,
       })),
     inclusions: o.inclusions || [],
+    exclusions: o.exclusions || [],
     faqs: (o.faqs || []).map((f) => ({ q: f.q || "", a: f.a || "" })),
     durationMin: o.durationMin,
     price: o.price,
@@ -148,6 +149,9 @@ function serializeBooking(booking) {
               : null,
         }
       : null,
+    arrivalSelfie: o.arrivalSelfie?.url
+      ? { url: o.arrivalSelfie.url, capturedAt: o.arrivalSelfie.capturedAt || null }
+      : null,
     expertEarning: o.expertEarning,
     expert: serializeExpertBrief(o.expert),
     customer: serializeUserBrief(o.customer),
@@ -177,6 +181,20 @@ async function serializeExpert(expert) {
     lastLocation: o.lastLocation,
     activeBooking,
     trainingStatus: o.trainingStatus || "pending",
+    specialization: o.specialization || "general",
+    documents: o.documents || {
+      aadhaarNumber: "",
+      aadhaarFrontUrl: "",
+      aadhaarBackUrl: "",
+      panNumber: "",
+      panUrl: "",
+      selfieUrl: "",
+    },
+    bank: o.bank || {
+      accountNumber: "",
+      ifsc: "",
+      holderName: "",
+    },
     kycStatus: o.kycStatus || "pending",
     kycNote: o.kycNote || "",
     kycSubmittedAt: o.kycSubmittedAt || null,

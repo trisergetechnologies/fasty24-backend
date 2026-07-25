@@ -17,6 +17,7 @@ const { findByPublicId, isMongoObjectId, bookingRoomId } = require("../lib/ids")
 const { serializeBooking } = require("../lib/serialize");
 const { serializeBookingForExpert } = require("../lib/serializeExpertBooking");
 const { loadExpertFromAuth } = require("../lib/expertAuth");
+const env = require("../config/env");
 
 async function notifyCustomerSessionOtp(booking, kind) {
   try {
@@ -394,9 +395,19 @@ const expertArrived = asyncHandler(async (req, res) => {
       message: "Mark arrived after you are on the way.",
     });
   }
+  const selfieUrl = req.body?.selfieUrl ? String(req.body.selfieUrl).trim() : "";
+  if (!selfieUrl && env.REQUIRE_ARRIVAL_SELFIE) {
+    return res.status(400).json({
+      error: "selfie_required",
+      message: "Capture a live selfie before marking arrived.",
+    });
+  }
   // If expert skipped "on the way", still stamp enRouteAt for timeline continuity
   if (!booking.timeline.enRouteAt) {
     booking.timeline.enRouteAt = new Date();
+  }
+  if (selfieUrl) {
+    booking.arrivalSelfie = { url: selfieUrl, capturedAt: new Date() };
   }
   booking.status = "arrived";
   booking.timeline.arrivedAt = new Date();
@@ -427,6 +438,14 @@ const expertStart = asyncHandler(async (req, res) => {
   if (!booking) return res.status(404).json({ error: "not_found" });
   if (!["assigned", "travelling", "arrived"].includes(booking.status)) {
     return res.status(400).json({ error: "invalid_status" });
+  }
+  // Soft-enforce: only block when REQUIRE_ARRIVAL_SELFIE=true (after expert app rollout).
+  // Legacy arrived bookings without a selfie remain startable so production jobs are not stuck.
+  if (env.REQUIRE_ARRIVAL_SELFIE && !booking.arrivalSelfie?.url) {
+    return res.status(400).json({
+      error: "selfie_required",
+      message: "Capture a live selfie after arriving before starting the job.",
+    });
   }
   const { otp } = req.body;
   if (!otp || booking.sessionOtp?.startCode !== String(otp).trim()) {

@@ -117,6 +117,10 @@ const bookingSchema = new mongoose.Schema(
       startVerifiedAt: Date,
       endVerifiedAt: Date,
     },
+    arrivalSelfie: {
+      url: { type: String, default: null },
+      capturedAt: { type: Date, default: null },
+    },
     pendingSuggestions: { type: [suggestionSchema], default: [] },
     expertEarning: { type: Number, default: 0 },
     declinedBy: {
