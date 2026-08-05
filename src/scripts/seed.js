@@ -8,12 +8,13 @@ const User = require("../models/User");
 const Zone = require("../models/Zone");
 const env = require("../config/env");
 const geo = require("../services/geo");
+const { MAID_TIERS, MAID_CATEGORY_DESCRIPTION } = require("./maid-tiers");
 
 const CATEGORIES = [
   {
     slug: "instant-maid",
     name: "Instant Maid",
-    description: "Home, kitchen, utensils and bathroom cleaning on demand.",
+    description: MAID_CATEGORY_DESCRIPTION,
     icon: "🧹",
     sortOrder: 1,
     supportsScheduling: false,
@@ -57,35 +58,8 @@ const CATEGORIES = [
   },
 ];
 
-function maidServices() {
-  const areas = [
-    { prefix: "home", label: "Home Cleaning" },
-    { prefix: "kitchen", label: "Kitchen Cleaning" },
-    { prefix: "utensils", label: "Utensils Cleaning" },
-    { prefix: "bathroom", label: "Bathroom Cleaning" },
-  ];
-  const durations = areas[2].prefix === "utensils" ? [30, 45] : [30, 45, 60];
-  const out = [];
-  for (const area of areas) {
-    const durs = area.prefix === "utensils" ? [30, 45] : [30, 45, 60];
-    for (const min of durs) {
-      out.push({
-        slug: `maid-${area.prefix}-${min}m`,
-        name: `${area.label} (${min} min)`,
-        categories: ["instant-maid"],
-        skillTag: "instant_maid",
-        serviceKind: "timed",
-        durationMin: min,
-        price: 199 + min * 4,
-        addOnEligible: false,
-      });
-    }
-  }
-  return out;
-}
-
 const SERVICES = [
-  ...maidServices(),
+  ...MAID_TIERS,
   { slug: "ac-jet-service", name: "Jet AC Servicing", categories: ["ac-service"], skillTag: "ac_service", durationMin: 60, price: 499, addOnEligible: true },
   { slug: "ac-repair", name: "AC Repair", categories: ["ac-service"], skillTag: "ac_service", durationMin: 60, price: 399, addOnEligible: true },
   { slug: "ac-install", name: "AC Installation", categories: ["ac-service"], skillTag: "ac_service", durationMin: 120, price: 1499, addOnEligible: false },
@@ -161,12 +135,13 @@ async function seed() {
       imageUrl: "",
       gallery: [],
       process: [],
-      inclusions: [
+      inclusions: s.inclusions || [
         "Verified professional",
         "Genuine parts & materials",
         "OTP-verified completion",
         "Upfront, transparent pricing",
       ],
+      exclusions: s.exclusions || [],
       faqs: [],
       active: true,
       serviceKind: s.serviceKind || "standard",

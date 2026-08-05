@@ -8,8 +8,8 @@ const env = require("../config/env");
 /**
  * Non-destructive price update script.
  * - Updates prices on existing services (does not wipe any data).
- * - Adds missing maid 120-min and 150-min tiers.
  * - Adds Electrician and Plumber categories + services if not present.
+ * Instant Maid tiers are managed separately by migrate-maid-tiers.js.
  * Run: node src/scripts/update-prices.js
  */
 
@@ -51,44 +51,8 @@ const PRICE_UPDATES = [
   { slug: "fridge-water-leakage",  price: 349, durationMin: 45 },
   { slug: "fridge-door-issue",     price: 349, durationMin: 45 },
   { slug: "fridge-noise-issue",    price: 349, durationMin: 45 },
-  // Maid — align to pricing sheet (1hr=149, 2hr=279, 2.5hr=349)
-  { slug: "maid-home-30m",     price: 99,  durationMin: 30 },
-  { slug: "maid-home-45m",     price: 129, durationMin: 45 },
-  { slug: "maid-home-60m",     price: 149, durationMin: 60 },
-  { slug: "maid-kitchen-30m",  price: 99,  durationMin: 30 },
-  { slug: "maid-kitchen-45m",  price: 129, durationMin: 45 },
-  { slug: "maid-kitchen-60m",  price: 149, durationMin: 60 },
-  { slug: "maid-utensils-30m", price: 99,  durationMin: 30 },
-  { slug: "maid-utensils-45m", price: 129, durationMin: 45 },
-  { slug: "maid-bathroom-30m", price: 99,  durationMin: 30 },
-  { slug: "maid-bathroom-45m", price: 129, durationMin: 45 },
-  { slug: "maid-bathroom-60m", price: 149, durationMin: 60 }, // Bathroom Cleaning ₹499... but maid model is timed
+  // Maid tiers are owned by migrate-maid-tiers.js — do not price them here.
 ];
-
-// New maid tiers matching "2 HOURS = ₹279" and "2.5 HOURS = ₹349"
-const NEW_MAID_SERVICES = [
-  { slug: "maid-home-120m",     name: "Home Cleaning (2 hrs)",     price: 279, durationMin: 120 },
-  { slug: "maid-home-150m",     name: "Home Cleaning (2.5 hrs)",   price: 349, durationMin: 150 },
-  { slug: "maid-kitchen-120m",  name: "Kitchen Cleaning (2 hrs)",  price: 279, durationMin: 120 },
-  { slug: "maid-kitchen-150m",  name: "Kitchen Cleaning (2.5 hrs)",price: 349, durationMin: 150 },
-  { slug: "maid-bathroom-120m", name: "Bathroom Cleaning (2 hrs)", price: 279, durationMin: 120 },
-  { slug: "maid-bathroom-150m", name: "Bathroom Cleaning (2.5 hrs)",price: 349, durationMin: 150 },
-].map((s) => ({
-  ...s,
-  categories: ["instant-maid"],
-  skillTag: "instant_maid",
-  serviceKind: "timed",
-  addOnEligible: false,
-  shortDescription: `${s.name} by background-verified professionals.`,
-  description: `Book ${s.name} with Fasty-24. Our trained professionals arrive in 15-20 minutes. OTP-secured and backed by our service guarantee.`,
-  imageUrl: "",
-  gallery: [],
-  process: [],
-  inclusions: ["Verified professional", "OTP-verified completion", "Upfront, transparent pricing"],
-  exclusions: ["Cleaning materials & supplies", "Dishwashing soap / detergents"],
-  faqs: [],
-  active: true,
-}));
 
 // New categories and services
 const NEW_CATEGORIES = [
@@ -248,19 +212,7 @@ async function run() {
   }
   console.log(`[update-prices] ${updated} services updated`);
 
-  // 2. Upsert new maid tiers (insert if not existing)
-  let newMaidInserted = 0;
-  for (const svc of NEW_MAID_SERVICES) {
-    const exists = await Service.findOne({ slug: svc.slug });
-    if (!exists) {
-      await Service.create(svc);
-      console.log(`[update-prices] inserted new maid service: ${svc.slug}`);
-      newMaidInserted++;
-    }
-  }
-  console.log(`[update-prices] ${newMaidInserted} new maid tiers inserted`);
-
-  // 3. Upsert new categories
+  // 2. Upsert new categories
   let newCatInserted = 0;
   for (const cat of NEW_CATEGORIES) {
     const exists = await Category.findOne({ slug: cat.slug });
@@ -272,7 +224,7 @@ async function run() {
   }
   console.log(`[update-prices] ${newCatInserted} new categories inserted`);
 
-  // 4. Upsert new services
+  // 3. Upsert new services
   let newSvcInserted = 0;
   for (const svc of NEW_SERVICES) {
     const exists = await Service.findOne({ slug: svc.slug });
@@ -284,14 +236,13 @@ async function run() {
   }
   console.log(`[update-prices] ${newSvcInserted} new services inserted`);
 
-  // 5. Also upsert exclusions on existing services that have none
+  // 4. Also upsert exclusions on existing services that have none
   const exclusionDefaults = [
     { skillTag: "ac_service",   exclusions: ["Spare parts & gas cost", "Electrical wiring work"] },
     { slug: "ac-gas-filling",   exclusions: ["Gas cost not included (charged separately)", "Compressor repair not included"] },
     { skillTag: "ro_service",   exclusions: ["Filter and membrane cost (for replacements)", "Plumbing pipe changes"] },
     { skillTag: "chimney",      exclusions: ["Motor/PCB replacement cost", "Physical damage repair"] },
     { skillTag: "fridge",       exclusions: ["Spare parts & refrigerant cost", "Physical damage repair"] },
-    { skillTag: "instant_maid", exclusions: ["Cleaning materials & supplies", "Dishwashing soap / detergents"] },
   ];
 
   for (const rule of exclusionDefaults) {
