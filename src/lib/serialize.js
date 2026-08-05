@@ -70,6 +70,7 @@ function serializeCategory(cat) {
     name: o.name,
     description: o.description,
     icon: o.icon || "",
+    imageUrl: o.imageUrl || "",
     sortOrder: o.sortOrder,
     supportsScheduling: o.supportsScheduling,
     supportsTimedJob: o.supportsTimedJob,
