@@ -6,9 +6,11 @@ const Service = require("../models/Service");
 const Expert = require("../models/Expert");
 const User = require("../models/User");
 const Zone = require("../models/Zone");
+const Part = require("../models/Part");
 const env = require("../config/env");
 const geo = require("../services/geo");
 const { MAID_TIERS, MAID_CATEGORY_DESCRIPTION } = require("./maid-tiers");
+const { slugify } = require("../controllers/part.controller");
 
 const CATEGORIES = [
   {
@@ -109,6 +111,157 @@ const SERVICES = [
   })),
 ];
 
+// Starter catalog so experts can build RO estimates on day one.
+// Prices are indicative MRPs; admin can correct them from the Parts page.
+const RO_SERVICE_SLUGS = [
+  "ro-repair-checkup",
+  "ro-filter-checkup",
+  "ro-filter-replacement",
+  "ro-install",
+];
+
+const PARTS = [
+  {
+    name: "Sediment Filter (Spun) 10\"",
+    sku: "RO-SED-10",
+    brand: "Generic",
+    description: "Pre-filter that removes dust, sand and rust. Replace every 4-6 months.",
+    kind: "part",
+    price: 180,
+    costPrice: 90,
+  },
+  {
+    name: "Pre Carbon Filter 10\"",
+    sku: "RO-PCB-10",
+    brand: "Generic",
+    description: "Activated carbon block that removes chlorine, odour and organic matter.",
+    kind: "part",
+    price: 250,
+    costPrice: 130,
+  },
+  {
+    name: "Post Carbon Filter (Inline)",
+    sku: "RO-POST-C",
+    brand: "Generic",
+    description: "Polishes taste and odour after the membrane.",
+    kind: "part",
+    price: 220,
+    costPrice: 110,
+  },
+  {
+    name: "RO Membrane 75 GPD",
+    sku: "RO-MEM-75",
+    brand: "Generic",
+    description: "Standard domestic membrane. Replace every 18-24 months.",
+    kind: "part",
+    price: 1450,
+    costPrice: 850,
+  },
+  {
+    name: "RO Membrane 80 GPD",
+    sku: "RO-MEM-80",
+    brand: "Generic",
+    description: "Higher-flow membrane for larger households or high TDS input.",
+    kind: "part",
+    price: 1750,
+    costPrice: 1050,
+  },
+  {
+    name: "Booster Pump 100 GPD",
+    sku: "RO-PUMP-100",
+    brand: "Generic",
+    description: "Raises inlet pressure so the membrane can filter effectively.",
+    kind: "part",
+    price: 1250,
+    costPrice: 750,
+  },
+  {
+    name: "SMPS Adapter 24V 2A",
+    sku: "RO-SMPS-24",
+    brand: "Generic",
+    description: "Power supply unit for the purifier.",
+    kind: "part",
+    price: 650,
+    costPrice: 380,
+  },
+  {
+    name: "Solenoid Valve (SV) 24V",
+    sku: "RO-SV-24",
+    brand: "Generic",
+    description: "Cuts water flow when the tank is full.",
+    kind: "part",
+    price: 380,
+    costPrice: 200,
+  },
+  {
+    name: "Float Valve",
+    sku: "RO-FLOAT",
+    brand: "Generic",
+    description: "Mechanical tank level cut-off.",
+    kind: "part",
+    price: 150,
+    costPrice: 70,
+  },
+  {
+    name: "UV Lamp 11W",
+    sku: "RO-UV-11",
+    brand: "Generic",
+    description: "Ultraviolet lamp for bacterial disinfection.",
+    kind: "part",
+    price: 550,
+    costPrice: 300,
+  },
+  {
+    name: "Filter Housing Bowl 10\"",
+    sku: "RO-HOUSE-10",
+    brand: "Generic",
+    description: "Replacement housing for pre-filter cartridges.",
+    kind: "part",
+    price: 320,
+    costPrice: 170,
+  },
+  {
+    name: "RO Water Tube 1/4\"",
+    sku: "RO-TUBE-14",
+    brand: "Generic",
+    description: "Food-grade tubing.",
+    kind: "consumable",
+    unit: "metre",
+    price: 35,
+    costPrice: 15,
+  },
+  {
+    name: "Complete Filter Kit (Sediment + Pre + Post Carbon)",
+    sku: "RO-KIT-3",
+    brand: "Generic",
+    description: "The three filters replaced together at every standard service.",
+    kind: "kit",
+    unit: "set",
+    price: 599,
+    costPrice: 330,
+  },
+  {
+    name: "Full Service Kit (3 Filters + Membrane 80 GPD)",
+    sku: "RO-KIT-4",
+    brand: "Generic",
+    description: "Complete overhaul kit for a purifier that has not been serviced in 2 years.",
+    kind: "kit",
+    unit: "set",
+    price: 2199,
+    costPrice: 1300,
+  },
+  {
+    name: "Additional Labour (per hour)",
+    sku: "RO-LAB-HR",
+    brand: "",
+    description: "Charged for work beyond the booked service scope.",
+    kind: "labour",
+    unit: "hour",
+    price: 299,
+    costPrice: 0,
+  },
+];
+
 const DEMO_EMAIL = "demo@gmail.com";
 const DEMO_PASSWORD = "Demo@12345";
 
@@ -121,9 +274,24 @@ async function seed() {
     Expert.deleteMany({}),
     User.deleteMany({}),
     Zone.deleteMany({}),
+    Part.deleteMany({ source: "catalog" }),
   ]);
 
   await Category.insertMany(CATEGORIES);
+
+  await Part.insertMany(
+    PARTS.map((p) => ({
+      ...p,
+      slug: slugify(p.name),
+      unit: p.unit || "piece",
+      categories: ["ro-service"],
+      serviceSlugs: RO_SERVICE_SLUGS,
+      imageUrl: "",
+      active: true,
+      source: "catalog",
+      verificationStatus: "approved",
+    }))
+  );
   await Service.insertMany(
     SERVICES.map((s) => ({
       ...s,
@@ -217,7 +385,9 @@ async function seed() {
     });
   }
 
-  console.log(`[seed] ${CATEGORIES.length} categories, ${SERVICES.length} services, zone + experts ready`);
+  console.log(
+    `[seed] ${CATEGORIES.length} categories, ${SERVICES.length} services, ${PARTS.length} parts, zone + experts ready`
+  );
   console.log(`[seed] demo login — email: ${DEMO_EMAIL}  password: ${DEMO_PASSWORD}`);
   await mongoose.disconnect();
 }

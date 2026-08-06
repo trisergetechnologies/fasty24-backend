@@ -11,6 +11,7 @@ const pricing = require("../services/pricing");
 const paymentService = require("../services/payment");
 const notify = require("../services/notify");
 const earningsService = require("../services/earnings");
+const estimatesService = require("../services/estimates");
 const sms = require("../services/sms");
 const User = require("../models/User");
 const { findByPublicId, isMongoObjectId, bookingRoomId } = require("../lib/ids");
@@ -485,6 +486,11 @@ const expertComplete = asyncHandler(async (req, res) => {
   const booking = await loadBooking(req.params.id, { expert: ef.expert });
   if (!booking) return res.status(404).json({ error: "not_found" });
   if (booking.status !== "in_progress") return res.status(400).json({ error: "invalid_status" });
+
+  // Approved estimates must be settled and every installed part photographed
+  const blocker = await estimatesService.checkBookingSettlement(booking._id);
+  if (blocker) return res.status(400).json(blocker);
+
   const { otp } = req.body;
   if (!otp || booking.sessionOtp?.endCode !== String(otp).trim()) {
     return res.status(400).json({ error: "invalid_otp" });
@@ -497,7 +503,9 @@ const expertComplete = asyncHandler(async (req, res) => {
   booking.sessionOtp.endVerifiedAt = new Date();
   booking.status = "completed";
   booking.timeline.completedAt = new Date();
-  booking.expertEarning = Math.round((booking.pricing?.subtotal || 0) * earningsService.COMMISSION_RATE);
+  const estimateEarning = await estimatesService.bookingEstimateEarning(booking._id);
+  booking.expertEarning =
+    Math.round((booking.pricing?.subtotal || 0) * earningsService.COMMISSION_RATE) + estimateEarning;
   await booking.save();
   await Expert.updateOne(
     { _id: ef.expert },
